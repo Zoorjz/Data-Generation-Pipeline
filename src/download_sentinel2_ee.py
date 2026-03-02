@@ -207,6 +207,17 @@ def main():
                      .filterDate(args.start_date, args.end_date)
                      .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 10)))
     
+    print("Fetching exact dates used in composite...")
+    try:
+        # Extract unique dates used in the median composite
+        dates_used = s2_collection.aggregate_array('system:time_start').map(
+            lambda t: ee.Date(t).format('YYYY-MM-dd')
+        ).distinct().getInfo()
+        dates_used.sort()
+    except Exception as e:
+        print(f"Failed to fetch dates: {e}")
+        dates_used = []
+    
     # Create cloud-free median mosaic
     image = s2_collection.median().clip(aoi)
     
@@ -225,6 +236,47 @@ def main():
     # 3. SWIR (Short-Wave Infrared) Visual Combination as 3-band
     swir_vis = image.visualize(bands=['B12', 'B8A', 'B4'], min=0, max=3000)
     download_image_local(swir_vis, 'Nuremberg_SWIR', folder=out_folder, crs=dst_crs, crs_transform=ee_crs_transform, dimensions=ee_dimensions, region=aoi)
+    
+    # Generate metadata description file
+    from datetime import datetime
+    
+    md_content = f"""# Sentinel-2 Data Download Summary
+
+**Download Date:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+**Time Period:** {args.start_date} to {args.end_date}
+
+**Exact Dates Used in Composite:** 
+{', '.join(dates_used) if dates_used else 'None found (or failed to fetch)'}
+
+## Downloaded Files
+
+The following files were generated in this directory:
+
+1. **Nuremberg_S2RGBNIR.tif**
+   - **Bands:** 4 Bands (B4 - Red, B3 - Green, B2 - Blue, B8 - NIR)
+   - **Type:** Native Uint16 dataset
+   - **Description:** Raw multispectral data mapped exactly to the ESA S2 layout.
+
+2. **Nuremberg_NDVI.tif**
+   - **Bands:** 3 Bands (Visual RGB)
+   - **Type:** Normalized Difference Vegetation Index
+   - **Description:** Visual representation of vegetation health (palette: red, yellow, green).
+
+3. **Nuremberg_SWIR.tif**
+   - **Bands:** 3 Bands (Visual RGB)
+   - **Type:** Short-Wave Infrared visualization (B12, B8A, B4)
+   - **Description:** Visualization emphasizing moisture differences and structure.
+
+## Technical Details
+- **CRS:** EPSG:3857
+- **Dimensions:** {dst_width}x{dst_height}
+- **Bounding Box (EPSG:3857):** {bounds_3857}
+"""
+    
+    md_path = os.path.join(out_folder, 'README.md')
+    with open(md_path, 'w') as f:
+        f.write(md_content)
+    print(f"Generated metadata record at {md_path}")
     
 if __name__ == '__main__':
     main()

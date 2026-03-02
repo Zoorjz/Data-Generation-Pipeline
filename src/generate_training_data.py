@@ -192,6 +192,11 @@ def generate():
     esa_2020_path = os.path.join(base_dir, "OriginalData", "WORLDCOVER", "ESA_WORLDCOVER_10M_2021_V200", "ESA_WORLDCOVER_10M_2020_V100", "MAP", "ESA_WorldCover_10m_2020_v100_N48E009_Map", "ESA_WorldCover_10m_2020_v100_N48E009_Map.tif")
     esa_2021_path = os.path.join(base_dir, "OriginalData", "WORLDCOVER", "ESA_WORLDCOVER_10M_2021_V200", "MAP", "ESA_WorldCover_10m_2021_v200_N48E009_Map", "ESA_WorldCover_10m_2021_v200_N48E009_Map.tif")
     
+    # Add Windows long path support to bypass 260 character limit
+    if os.name == 'nt':
+        esa_2020_path = f"\\\\?\\{os.path.normpath(os.path.abspath(esa_2020_path))}"
+        esa_2021_path = f"\\\\?\\{os.path.normpath(os.path.abspath(esa_2021_path))}"
+    
     bbox_32632 = get_nuremberg_bbox()
     align_params = get_align_params(bbox_32632)
     _, transform, width, height, bounds_3857 = align_params
