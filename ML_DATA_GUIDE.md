@@ -73,13 +73,15 @@ This script independently pulls raw datasets and compiles them into three heavil
 
 **Command:**
 ```bash
-python src/generate_training_data.py --grid_size 1000 --labels Built-up "Tree cover" Water
+python src/generate_training_data.py --grid_size 1000 --labels Built-up "Tree cover" Water --denoise
 ```
 
 ### Parameters:
 - `--grid_size`: The math-perfect bounding box slice size in meters (e.g., `1000` = 1km x 1km cells).
 - `--labels`: Space-separated list of ESA classes to calculate. *Strings with spaces must be quoted.*
 - `--out_dir`: (Optional) Custom output directory. Default is `data/training_data`.
+- `--denoise`: Applies noise reduction to base targets.
+- `--with_noise`: Leaves noise unmasked.
 
 ### Output Structure:
 The command structurally extracts predictions natively into directories mapping `Composition_prediction_in_3_years` and `Composition_diff_in_one_year`:

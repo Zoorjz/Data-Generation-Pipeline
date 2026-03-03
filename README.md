@@ -28,7 +28,9 @@ To run the complete pipeline automatically, you can use the central orchestratio
 .\venv\Scripts\Activate.ps1
 
 # Run the master pipeline script
-python run_pipeline.py
+python run_pipeline.py --denoise
+# or
+python run_pipeline.py --with_noise
 ```
 
 ### What `run_pipeline.py` does:
@@ -77,10 +79,12 @@ Aligns the spatial maps, fetches dynamic OSM data, handles noise reduction, mask
 
 **Command:**
 ```bash
-python src/generate_training_data.py --grid_size 1000 --labels "Built-up" "Permanent water bodies"
+python src/generate_training_data.py --grid_size 1000 --labels "Built-up" "Permanent water bodies" --denoise
 ```
 
 **Flags:**
 * `--grid_size`: Size of the resulting square grid blocks in meters (default: `1000`)
 * `--labels`: Space-separated list of ESA WorldCover labels to compute percentages for. Example: `--labels "Built-up" "Tree cover" "Permanent water bodies"`
 * `--out_dir`: Directory where the final datasets will be saved (default: `data/training_data`)
+* `--denoise`: Apply denoising filtering to 2020 map for expanding infrastructure
+* `--with_noise`: Choose to leave 2020 baseline maps strictly matching raw outputs

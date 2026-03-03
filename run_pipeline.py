@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import subprocess
+import argparse
 
 def check_worldcover_data():
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -75,6 +76,12 @@ def run_download_with_timeout(start_date, end_date, timeout_seconds=500):
         time.sleep(1)
 
 def main():
+    parser = argparse.ArgumentParser(description="Run the full data generation pipeline.")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--denoise", action="store_true", help="Apply denoising to 2020 data")
+    group.add_argument("--with_noise", action="store_true", help="Do not apply denoising (leave noise)")
+    args = parser.parse_args()
+
     print("1. Checking WorldCover data availability...")
     check_worldcover_data()
     print("WorldCover data is present.\n")
@@ -110,6 +117,12 @@ def main():
         "--grid_size", "1000",
         "--labels", "Built-up", "Permanent water bodies"
     ]
+    
+    if args.with_noise:
+        cmd.append("--with_noise")
+    elif args.denoise:
+        cmd.append("--denoise")
+
     print(f"Running command: {' '.join(cmd)}")
     subprocess.run(cmd, check=True)
     print("Pipeline completed successfully!")

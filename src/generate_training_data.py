@@ -9,6 +9,7 @@ import osmnx as ox
 import pandas as pd
 from rasterio.warp import calculate_default_transform, reproject, Resampling
 from rasterio.merge import merge
+import time
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Generate ML training data for Nuremberg land cover.")
@@ -16,6 +17,9 @@ def parse_args():
     parser.add_argument("--labels", nargs="+", default=["Built-up", "Permanent water bodies"], 
                         help="List of ESA WorldCover labels to include. Example: --labels Built-up 'Tree cover'")
     parser.add_argument("--out_dir", type=str, default="data/training_data", help="Output directory.")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--denoise", action="store_true", help="Apply denoising to 2020 data")
+    group.add_argument("--with_noise", action="store_true", help="Do not apply denoising (leave noise)")
     return parser.parse_args()
 
 ESA_CLASSES = {
@@ -178,10 +182,14 @@ def write_to_gpkg(filepath_tif, filepath_gpkg, s2_data, ndvi_data, swir_data, ra
 def generate():
     args = parse_args()
     
+    suffix = "_denoised" if args.denoise else "_with_noise"
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
+    run_dir = os.path.join(args.out_dir, f"run{suffix}_{timestamp}")
+    
     # Define completely new target paths
-    pred_3_yrs_2020_dir = os.path.join(args.out_dir, "Composition_prediction_in_3_years", "2020")
-    pred_3_yrs_2021_dir = os.path.join(args.out_dir, "Composition_prediction_in_3_years", "2021")
-    diff_1_yr_dir = os.path.join(args.out_dir, "Composition_diff_in_one_year")
+    pred_3_yrs_2020_dir = os.path.join(run_dir, "Composition_prediction_in_3_years", "2020")
+    pred_3_yrs_2021_dir = os.path.join(run_dir, "Composition_prediction_in_3_years", "2021")
+    diff_1_yr_dir = os.path.join(run_dir, "Composition_diff_in_one_year")
     
     for d in [pred_3_yrs_2020_dir, pred_3_yrs_2021_dir, diff_1_yr_dir]:
         os.makedirs(d, exist_ok=True)
@@ -205,10 +213,13 @@ def generate():
     data_2020 = process_raster_memory(esa_2020_path, align_params)
     data_2021 = process_raster_memory(esa_2021_path, align_params)
     
-    print("Calculating Noise Mask & Generating Denoised 2020 Maps...")
-    noise_mask = (data_2021 == 50) & (data_2020 == 30)
-    data_2020_denoised = np.copy(data_2020)
-    data_2020_denoised[noise_mask] = 50
+    data_2020_processed = np.copy(data_2020)
+    if args.denoise:
+        print("Calculating Noise Mask & Generating Denoised 2020 Maps...")
+        noise_mask = (data_2021 == 50) & (data_2020 == 30)
+        data_2020_processed[noise_mask] = 50
+    else:
+        print("Skipping denoising, keeping 2020 data with noise...")
     
     # Setup Earth Engine loaded images explicitly by mapping paths
     def load_year_ee_data(year_str):
@@ -223,11 +234,6 @@ def generate():
     s2_2018, ndvi_2018, swir_2018 = load_year_ee_data("2018")
     s2_2020, ndvi_2020, swir_2020 = load_year_ee_data("2020")
     
-    print("Calculating Noise Mask & Denoised 2020...")
-    noise_mask = (data_2021 == 50) & (data_2020 == 30)
-    data_2020_denoised = np.copy(data_2020)
-    data_2020_denoised[noise_mask] = 50
-    
     print("Downloading OSM Data (dynamically bound to Sentinel target dates)...")
     lines_2017, stations_2017 = fetch_osm_infrastructure(bounds_3857, 2017)
     lines_2018, stations_2018 = fetch_osm_infrastructure(bounds_3857, 2018)
@@ -236,25 +242,25 @@ def generate():
     print("Downloading Nuremberg City Border...")
     border_gdf = fetch_nuremberg_border()
     
-    gpkg_pred_2020 = os.path.join(pred_3_yrs_2020_dir, "training_data.gpkg")
-    tif_pred_2020 = os.path.join(pred_3_yrs_2020_dir, "training_data.tif")
+    gpkg_pred_2020 = os.path.join(pred_3_yrs_2020_dir, f"training_data{suffix}.gpkg")
+    tif_pred_2020 = os.path.join(pred_3_yrs_2020_dir, f"training_data{suffix}.tif")
     
-    gpkg_pred_2021 = os.path.join(pred_3_yrs_2021_dir, "training_data.gpkg")
-    tif_pred_2021 = os.path.join(pred_3_yrs_2021_dir, "training_data.tif")
+    gpkg_pred_2021 = os.path.join(pred_3_yrs_2021_dir, f"training_data{suffix}.gpkg")
+    tif_pred_2021 = os.path.join(pred_3_yrs_2021_dir, f"training_data{suffix}.tif")
     
-    gpkg_diff_2020 = os.path.join(diff_1_yr_dir, "training_data.gpkg")
-    tif_diff_2020 = os.path.join(diff_1_yr_dir, "training_data.tif")
+    gpkg_diff_2020 = os.path.join(diff_1_yr_dir, f"training_data{suffix}.gpkg")
+    tif_diff_2020 = os.path.join(diff_1_yr_dir, f"training_data{suffix}.tif")
     
     print("Writing Target 1: Pred 3 Years (2020)...")
-    write_to_gpkg(tif_pred_2020, gpkg_pred_2020, s2_2017, ndvi_2017, swir_2017, data_2020_denoised, transform, width, height, lines_2017, stations_2017, border_gdf, args.labels)
+    write_to_gpkg(tif_pred_2020, gpkg_pred_2020, s2_2017, ndvi_2017, swir_2017, data_2020_processed, transform, width, height, lines_2017, stations_2017, border_gdf, args.labels)
     
     print("Writing Target 2: Pred 3 Years (2021)...")
     write_to_gpkg(tif_pred_2021, gpkg_pred_2021, s2_2018, ndvi_2018, swir_2018, data_2021, transform, width, height, lines_2018, stations_2018, border_gdf, args.labels)
     
     print("Writing Target 3: Diff 1 Year Ahead (2020-2021)...")
     # For differential tasks, the label array technically isn't explicitly printed into the input geo-image natively as a band (handled via pure grid math).
-    # But for visual integrity, we insert `data_2020_denoised` into the .tif output since it represents the baseline map representation matching that time without noise.
-    write_to_gpkg(tif_diff_2020, gpkg_diff_2020, s2_2020, ndvi_2020, swir_2020, data_2020_denoised, transform, width, height, lines_2020, stations_2020, border_gdf, args.labels)
+    # But for visual integrity, we insert `data_2020_processed` into the .tif output since it represents the baseline map representation matching that time.
+    write_to_gpkg(tif_diff_2020, gpkg_diff_2020, s2_2020, ndvi_2020, swir_2020, data_2020_processed, transform, width, height, lines_2020, stations_2020, border_gdf, args.labels)
     
     print(f"Generating Grids ({args.grid_size}m)...")
     P = max(1, args.grid_size // 10)
@@ -274,7 +280,7 @@ def generate():
             c_start, c_end = c * P, min((c + 1) * P, width)
             
             block_2021 = data_2021[r_start:r_end, c_start:c_end]
-            block_2020_denoised = data_2020_denoised[r_start:r_end, c_start:c_end]
+            block_2020_processed = data_2020_processed[r_start:r_end, c_start:c_end]
             
             if block_2021.size == 0:
                 continue
@@ -298,17 +304,17 @@ def generate():
             
             # Predict labels 3-years explicitly (e.g. baseline feature array matches offset 2020/2021 explicitly)
             pred_2020_data = base_row.copy()
-            pred_2020_data["gpkg_file"] = "training_data.gpkg"
-            pred_2020_data["tif_file"] = "training_data.tif"
+            pred_2020_data["gpkg_file"] = f"training_data{suffix}.gpkg"
+            pred_2020_data["tif_file"] = f"training_data{suffix}.tif"
             
             pred_2021_data = base_row.copy()
-            pred_2021_data["gpkg_file"] = "training_data.gpkg"
-            pred_2021_data["tif_file"] = "training_data.tif"
+            pred_2021_data["gpkg_file"] = f"training_data{suffix}.gpkg"
+            pred_2021_data["tif_file"] = f"training_data{suffix}.tif"
             
             # Learn composition differential relative to 1-year boundaries
             diff_2020_data = base_row.copy()
-            diff_2020_data["gpkg_file"] = "training_data.gpkg"
-            diff_2020_data["tif_file"] = "training_data.tif"
+            diff_2020_data["gpkg_file"] = f"training_data{suffix}.gpkg"
+            diff_2020_data["tif_file"] = f"training_data{suffix}.tif"
             
             selected_sum_pred_2020 = 0
             selected_sum_pred_2021 = 0
@@ -321,21 +327,21 @@ def generate():
                 proper_label = ESA_CLASSES[val]
                 
                 # Composition label distributions
-                pct_2020_denoised = (np.sum(block_2020_denoised == val) / block_2021.size) * 100
+                pct_2020_processed = (np.sum(block_2020_processed == val) / block_2021.size) * 100
                 pct_2021_raw = (np.sum(block_2021 == val) / block_2021.size) * 100
                 
                 # Setup models mapping purely the spatial component
-                pred_2020_data[f"{proper_label} %"] = round(pct_2020_denoised, 2)
-                selected_sum_pred_2020 += pct_2020_denoised
+                pred_2020_data[f"{proper_label} %"] = round(pct_2020_processed, 2)
+                selected_sum_pred_2020 += pct_2020_processed
                 
                 pred_2021_data[f"{proper_label} %"] = round(pct_2021_raw, 2)
                 selected_sum_pred_2021 += pct_2021_raw
                 
                 # Setup model optimizing for learning changes exclusively isolated
-                diff_2020_data[f"{proper_label} Baseline %"] = round(pct_2020_denoised, 2)
+                diff_2020_data[f"{proper_label} Baseline %"] = round(pct_2020_processed, 2)
                 diff_2020_data[f"{proper_label} Target %"] = round(pct_2021_raw, 2)
-                diff_2020_data[f"delta {proper_label} %"] = round(pct_2021_raw - pct_2020_denoised, 2)
-                selected_sum_diff_baseline += pct_2020_denoised
+                diff_2020_data[f"delta {proper_label} %"] = round(pct_2021_raw - pct_2020_processed, 2)
+                selected_sum_diff_baseline += pct_2020_processed
                 selected_sum_diff_target += pct_2021_raw
                 
             # Handle implicitly tracked 'Others'
@@ -360,11 +366,11 @@ def generate():
     df_pred_2021 = pd.DataFrame(rows_pred_2021)
     df_diff_1_yr = pd.DataFrame(rows_diff_1_yr)
     
-    df_pred_2020.to_csv(os.path.join(pred_3_yrs_2020_dir, "grid_stats.csv"), index=False)
-    df_pred_2021.to_csv(os.path.join(pred_3_yrs_2021_dir, "grid_stats.csv"), index=False)
-    df_diff_1_yr.to_csv(os.path.join(diff_1_yr_dir, "grid_stats.csv"), index=False)
+    df_pred_2020.to_csv(os.path.join(pred_3_yrs_2020_dir, f"grid_stats{suffix}.csv"), index=False)
+    df_pred_2021.to_csv(os.path.join(pred_3_yrs_2021_dir, f"grid_stats{suffix}.csv"), index=False)
+    df_diff_1_yr.to_csv(os.path.join(diff_1_yr_dir, f"grid_stats{suffix}.csv"), index=False)
     
-    print("Done! Files generated in", args.out_dir)
+    print("Done! Files generated in", run_dir)
 
 if __name__ == "__main__":
     generate()
