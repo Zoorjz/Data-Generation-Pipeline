@@ -1,0 +1,24 @@
+# Data folders
+OriginalData/
+data/
+venv/
+cache/
+Down_the_pipe_data_and_scripts/
+.env
+
+# Cache files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+.DS_Store
+data.zip
+Down_the_pipe_data_and_scripts.zip
+ml_training_data_bundle.zip
+ml_training_data_bundle_20260226_235848.zip
+src/inspect_bands.py
+src/find_max_noise.py
+ml_training_data_bundle_20260302_200300.zip
+ml_training_data_bundle_20260302_194711.zip
