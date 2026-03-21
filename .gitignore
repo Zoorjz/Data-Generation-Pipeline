@@ -22,3 +22,4 @@ src/inspect_bands.py
 src/find_max_noise.py
 ml_training_data_bundle_20260302_200300.zip
 ml_training_data_bundle_20260302_194711.zip
+src/predict_new_data.py
