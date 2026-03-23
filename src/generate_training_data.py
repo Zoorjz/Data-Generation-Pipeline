@@ -197,7 +197,7 @@ def generate():
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     
     # Old original ESA worldcover ground truth layouts
-    esa_2020_path = os.path.join(base_dir, "OriginalData", "WORLDCOVER", "ESA_WORLDCOVER_10M_2021_V200", "ESA_WORLDCOVER_10M_2020_V100", "MAP", "ESA_WorldCover_10m_2020_v100_N48E009_Map", "ESA_WorldCover_10m_2020_v100_N48E009_Map.tif")
+    esa_2020_path = os.path.join(base_dir, "OriginalData", "WORLDCOVER", "ESA_WORLDCOVER_10M_2020_V100", "MAP", "ESA_WorldCover_10m_2020_v100_N48E009_Map", "ESA_WorldCover_10m_2020_v100_N48E009_Map.tif")
     esa_2021_path = os.path.join(base_dir, "OriginalData", "WORLDCOVER", "ESA_WORLDCOVER_10M_2021_V200", "MAP", "ESA_WorldCover_10m_2021_v200_N48E009_Map", "ESA_WorldCover_10m_2021_v200_N48E009_Map.tif")
     
     # Add Windows long path support to bypass 260 character limit
