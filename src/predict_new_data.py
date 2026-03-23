@@ -106,7 +106,7 @@ def construct_diff_df(df, models_diff, X_comp, comp_predictions, year):
 
 def main():
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-    data_gen_dir = os.path.join(base_dir, "Data Generation Pipeline")
+    data_gen_dir = os.path.join(base_dir, "Data-Generation-Pipeline")
     
     tasks = discover_feature_folders(os.path.join(data_gen_dir, "data"))
     if not tasks:
