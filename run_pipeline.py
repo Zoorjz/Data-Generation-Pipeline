@@ -8,7 +8,7 @@ def check_worldcover_data():
     base_dir = os.path.dirname(os.path.abspath(__file__))
     # Assuming this script is run from the root of the "Data Generation Pipeline" directory
     # If the OriginalData directory is outside, we adjust the path
-    esa_2020_path = os.path.join(base_dir, "OriginalData", "WORLDCOVER", "ESA_WORLDCOVER_10M_2021_V200", "ESA_WORLDCOVER_10M_2020_V100", "MAP", "ESA_WorldCover_10m_2020_v100_N48E009_Map", "ESA_WorldCover_10m_2020_v100_N48E009_Map.tif")
+    esa_2020_path = os.path.join(base_dir, "OriginalData", "WORLDCOVER", "ESA_WORLDCOVER_10M_2020_V100", "MAP", "ESA_WorldCover_10m_2020_v100_N48E009_Map", "ESA_WorldCover_10m_2020_v100_N48E009_Map.tif")
     esa_2021_path = os.path.join(base_dir, "OriginalData", "WORLDCOVER", "ESA_WORLDCOVER_10M_2021_V200", "MAP", "ESA_WorldCover_10m_2021_v200_N48E009_Map", "ESA_WorldCover_10m_2021_v200_N48E009_Map.tif")
 
     # Add Windows long path support to bypass the 260 character limit
@@ -30,6 +30,14 @@ def check_worldcover_data():
         sys.exit(1)
 
 def run_download_with_timeout(start_date, end_date, timeout_seconds=500):
+    # Check if data already exists to skip massive redundant downloads
+    expected_folder = os.path.join("data", f"sentinel2_downloads_{start_date}_{end_date}")
+    expected_tif = os.path.join(expected_folder, "Nuremberg_S2RGBNIR.tif")
+    if os.path.exists(expected_tif):
+        print(f"\n--- Data for {start_date} to {end_date} already exists in {expected_folder} ---")
+        print("Skipping download.")
+        return True
+
     print(f"\n--- Starting download for {start_date} to {end_date} ---")
     
     cmd = [
@@ -111,6 +119,7 @@ def main():
                 sys.exit(1)
         
     print("\n3. Generating Training Data...")
+    os.makedirs(os.path.join("data", "training_data"), exist_ok=True)
     cmd = [
         sys.executable,
         os.path.join("src", "generate_training_data.py"),
@@ -125,7 +134,32 @@ def main():
 
     print(f"Running command: {' '.join(cmd)}")
     subprocess.run(cmd, check=True)
-    print("Pipeline completed successfully!")
+    
+    print("\n4. Extracting ML Features (Auto-Detecting Latest Run)...")
+    extract_cmd = [
+        sys.executable,
+        os.path.join("src", "extract_features_cli.py")
+    ]
+    print(f"Running command: {' '.join(extract_cmd)}")
+    subprocess.run(extract_cmd, check=True)
+    
+    print("\n5. Training ML Models (Ridge, RF, GBT, MLP)...")
+    train_cmd = [
+        sys.executable,
+        os.path.join("src", "train_models_cli.py")
+    ]
+    print(f"Running command: {' '.join(train_cmd)}")
+    subprocess.run(train_cmd, check=True)
+    
+    print("\n6. Running Batch Inference Engine (Predicting Data Cubes)...")
+    predict_cmd = [
+        sys.executable,
+        os.path.join("src", "predict_new_data.py")
+    ]
+    print(f"Running command: {' '.join(predict_cmd)}")
+    subprocess.run(predict_cmd, check=True)
+    
+    print("\n=== PIPELINE COMPLETED SUCCESSFULLY ===")
 
 if __name__ == "__main__":
     main()

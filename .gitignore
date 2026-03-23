@@ -1,8 +1,10 @@
-# Data folders
+    # Data folders
 OriginalData/
 data/
 venv/
 cache/
+Features/
+outputs/
 Down_the_pipe_data_and_scripts/
 .env
 
