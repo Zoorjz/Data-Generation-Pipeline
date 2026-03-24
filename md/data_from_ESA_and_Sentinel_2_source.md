@@ -39,22 +39,37 @@ For the data to be downloaded, the user needs to authenticate with Google Earth 
 1. If running on a new machine, a browser window will automatically open to authenticate with Google Earth Engine when the script starts. 
 2. **Important:** Ensure you change the project name in `src/download_sentinel2_ee.py` to your own Google Cloud project ID if you are not a member of the original project team.
 
-### Folder Structure after downloading Sentinel-2 Data
+### Final Folder Structure overview
 Once you run the pipeline (`run_pipeline.py`), the `download_sentinel2_ee.py` script will download the image data directly into the `data/` folder, sorting it into separate folders grouped by their respective date ranges.
 
-Below is an overview of what the final `data/` workspace should look like. During the data generation and extraction steps, files that aren't strictly needed for the next layer of inference (such as `SWIR.tif` and `NDVI.tif`) are generally excluded from training and feature extraction, focusing the training process solely on `S2RGBNIR.tif` and similarly crucial files. Keep this in mind if modifying the pipeline code:
+Below is an overview of what both the final `OriginalData` and `data/` workspaces should look like together. During the data generation and extraction steps, files that aren't strictly needed for the next layer of inference (such as `SWIR.tif` and `NDVI.tif`) are generally excluded from training and feature extraction, focusing the training process solely on `S2RGBNIR.tif` and similarly crucial files. Keep this in mind if modifying the pipeline code:
 
 ```text
+OriginalData/
+└── WORLDCOVER/
+    ├── ESA_WORLDCOVER_10M_2020_V100/
+    │   └── MAP/
+    │       └── ESA_WorldCover_10m_2020_v100_N48E009_Map/
+    │           └── ESA_WorldCover_10m_2020_v100_N48E009_Map.tif
+    │
+    └── ESA_WORLDCOVER_10M_2021_V200/
+        └── MAP/
+            └── ESA_WorldCover_10m_2021_v200_N48E009_Map/
+                └── ESA_WorldCover_10m_2021_v200_N48E009_Map.tif
+
 data/
 ├── sentinel2_downloads_2017-06-01_2017-09-01/
-│   └── Nuremberg_S2RGBNIR.tif
+│   ├── Nuremberg_NDVI.tif
+│   ├── Nuremberg_S2RGBNIR.tif
+│   ├── Nuremberg_SWIR.tif
+│   └── README.md
 ├── sentinel2_downloads_2018-06-01_2018-09-01/
-│   └── Nuremberg_S2RGBNIR.tif
+│   ├── Nuremberg_NDVI.tif
+│   ├── Nuremberg_S2RGBNIR.tif
+│   ├── Nuremberg_SWIR.tif
+│   └── README.md
 ... continuing for other date ranges (2020, 2021, 2023, 2024, 2025)
-│
-└── training_data/
-    └── run_denoised_<timestamp>/  (or run_<timestamp>)
-        └── (Contains extracted patches, generated labels, and feature CSVs)
+
 ```
 
 After completing these setup and structure requirements, you are ready to execute the main pipeline file `run_pipeline.py`.
