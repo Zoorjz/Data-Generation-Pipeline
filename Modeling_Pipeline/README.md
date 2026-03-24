@@ -1,4 +1,4 @@
 Includes the core logic of machine learning models and how the models are evaluated.
 
-- For the main models used in the visualization check out the "Model_1" folder.
-- You may additionally check put "Model_2" folder for extra idea.
+- "Model_1" folder contains modeling logic and evaluation of the 4 models used in the next stage of the pipeline (Important!)
+- "Model_2" folder is the same but for other 2 models. (Not important!)
