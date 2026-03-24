@@ -85,8 +85,8 @@ def run_download_with_timeout(start_date, end_date, timeout_seconds=500):
 
 def main():
     parser = argparse.ArgumentParser(description="Run the full data generation pipeline.")
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--denoise", action="store_true", help="Apply denoising to 2020 data")
+    group = parser.add_mutually_exclusive_group(required=False)
+    group.add_argument("--denoise", action="store_true", help="Apply denoising to 2020 data (default)")
     group.add_argument("--with_noise", action="store_true", help="Do not apply denoising (leave noise)")
     args = parser.parse_args()
 
@@ -129,7 +129,7 @@ def main():
     
     if args.with_noise:
         cmd.append("--with_noise")
-    elif args.denoise:
+    else:
         cmd.append("--denoise")
 
     print(f"Running command: {' '.join(cmd)}")

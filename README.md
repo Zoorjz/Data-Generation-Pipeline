@@ -19,11 +19,11 @@ The system goes through following sequentially ordered steps inside the scripts:
 4. **Predict New Years**: Lastly, the pipeline acts as an inference engine. It applies the fully trained models across the full Sentinel-2 data spectrum for unseen or historical years, calculating the predicted land cover features locally.
 
 ## Running the Pipeline
-You can run the entire pipeline with a single command. The script requires you to declare your intention on handling noise in the generated data. You must pass either `--denoise` or `--with_noise`:
+You can run the entire pipeline with a single command. By default, the script applies a smoothing denoising algorithm to the 2020 labels:
 
 ```bash
-# To run the pipeline applying a smoothing denoising algorithm to the 2020 labels
-python run_pipeline.py --denoise
+# To run the pipeline with the default denoising applied
+python run_pipeline.py
 ```
 or 
 ```bash
